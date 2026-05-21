@@ -49,6 +49,8 @@ func apiRoutes(api *API) http.Handler {
 	r.Post("/connect", api.Connect)
 	r.Post("/execute", api.ExecuteQuery)
 	r.Get("/schema", api.GetSchema)
+	r.Get("/schema/{db}/tables", api.GetTables)
+	r.Get("/schema/{db}/{table}/columns", api.GetColumns)
 	r.Get("/compare", api.CompareQueries)
 	r.Get("/queries", api.ListQueries)
 	r.Get("/queries/{queryID}", api.GetQuery)

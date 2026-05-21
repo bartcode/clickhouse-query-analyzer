@@ -11,7 +11,6 @@ import type {
   ThreadSummary,
   ThreadProfile,
   QueryResult,
-  SchemaInfo,
 } from "./types";
 import { getConnectionHeaders } from "./connection";
 
@@ -102,6 +101,14 @@ export async function executeQuery(query: string, maxRows = 1000): Promise<Query
   });
 }
 
-export async function fetchSchema(): Promise<SchemaInfo> {
-  return fetchJSON<SchemaInfo>(`${BASE}/schema`);
+export async function fetchDatabases(): Promise<{ databases: string[] }> {
+  return fetchJSON<{ databases: string[] }>(`${BASE}/schema`);
+}
+
+export async function fetchTables(db: string): Promise<{ tables: { name: string; engine: string; row_count: number }[] }> {
+  return fetchJSON(`${BASE}/schema/${encodeURIComponent(db)}/tables`);
+}
+
+export async function fetchColumns(db: string, table: string): Promise<{ columns: { name: string; type: string }[] }> {
+  return fetchJSON(`${BASE}/schema/${encodeURIComponent(db)}/${encodeURIComponent(table)}/columns`);
 }

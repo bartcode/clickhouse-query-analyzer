@@ -171,14 +171,4 @@ export interface QueryResult {
   query_id: string;
 }
 
-export interface SchemaInfo {
-  databases: {
-    name: string;
-    tables: {
-      name: string;
-      engine: string;
-      row_count: number;
-      columns: { name: string; type: string }[];
-    }[];
-  }[];
-}
+

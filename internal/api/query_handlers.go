@@ -364,12 +364,50 @@ func (a *API) GetSchema(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadGateway, err.Error())
 		return
 	}
-
-	schema, err := ch.GetSchema(r.Context())
+	databases, err := ch.GetDatabases(r.Context())
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
+	if databases == nil {
+		databases = []string{}
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"databases": databases})
+}
 
-	writeJSON(w, http.StatusOK, schema)
+func (a *API) GetTables(w http.ResponseWriter, r *http.Request) {
+	ch, err := a.clientFromRequest(r)
+	if err != nil {
+		writeError(w, http.StatusBadGateway, err.Error())
+		return
+	}
+	db := chi.URLParam(r, "db")
+	tables, err := ch.GetTables(r.Context(), db)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if tables == nil {
+		tables = []clickhouse.TableInfo{}
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"tables": tables})
+}
+
+func (a *API) GetColumns(w http.ResponseWriter, r *http.Request) {
+	ch, err := a.clientFromRequest(r)
+	if err != nil {
+		writeError(w, http.StatusBadGateway, err.Error())
+		return
+	}
+	db := chi.URLParam(r, "db")
+	tbl := chi.URLParam(r, "table")
+	columns, err := ch.GetColumns(r.Context(), db, tbl)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if columns == nil {
+		columns = []clickhouse.ColumnInfo{}
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"columns": columns})
 }

@@ -4,9 +4,12 @@ import CodeMirror from "@uiw/react-codemirror";
 import { sql, SQLNamespace } from "@codemirror/lang-sql";
 import { oneDark } from "@codemirror/theme-one-dark";
 import { Play, Database, ChevronRight, ChevronDown, Loader2, ExternalLink, Table2, Square, Copy, Check, RefreshCw } from "lucide-react";
-import { executeQuery, fetchSchema } from "../api/client";
-import type { QueryResult, SchemaInfo } from "../api/types";
+import { executeQuery, fetchDatabases, fetchTables, fetchColumns } from "../api/client";
+import type { QueryResult } from "../api/types";
 import { formatNumber } from "../utils";
+
+type TableData = { name: string; engine: string; row_count: number; columns?: { name: string; type: string }[] };
+type SchemaData = { [db: string]: { tables?: TableData[]; loading?: boolean } };
 
 const STORAGE_KEY = "ch-query-editor-sql";
 
@@ -69,8 +72,9 @@ export function QueryEditor() {
   const [result, setResult] = useState<QueryResult | null>(null);
   const [error, setError] = useState("");
   const [running, setRunning] = useState(false);
-  const [schema, setSchema] = useState<SchemaInfo | null>(null);
-  const [schemaLoading, setSchemaLoading] = useState(true);
+  const [databases, setDatabases] = useState<string[]>([]);
+  const [schemaData, setSchemaData] = useState<SchemaData>({});
+  const [schemaLoading, setSchemaLoading] = useState(false);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [elapsed, setElapsed] = useState(0);
   const editorRef = useRef<any>(null);
@@ -78,12 +82,44 @@ export function QueryEditor() {
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const startTimeRef = useRef(0);
 
-  const loadSchema = useCallback(() => {
+  const loadDatabases = useCallback(() => {
     setSchemaLoading(true);
-    fetchSchema().then(setSchema).catch(() => {}).finally(() => setSchemaLoading(false));
+    fetchDatabases()
+      .then((d) => {
+        setDatabases(d.databases || []);
+        setSchemaData({});
+      })
+      .catch(() => {})
+      .finally(() => setSchemaLoading(false));
   }, []);
 
-  useEffect(() => { loadSchema(); }, [loadSchema]);
+  useEffect(() => { loadDatabases(); }, [loadDatabases]);
+
+  const loadTables = useCallback(async (db: string) => {
+    setSchemaData((prev) => ({ ...prev, [db]: { ...prev[db], loading: true } }));
+    try {
+      const res = await fetchTables(db);
+      setSchemaData((prev) => ({
+        ...prev,
+        [db]: { tables: res.tables || [], loading: false },
+      }));
+    } catch {
+      setSchemaData((prev) => ({ ...prev, [db]: { ...prev[db], loading: false } }));
+    }
+  }, []);
+
+  const loadColumns = useCallback(async (db: string, table: string) => {
+    try {
+      const res = await fetchColumns(db, table);
+      setSchemaData((prev) => {
+        const dbEntry = prev[db] || {};
+        const tables = (dbEntry.tables || []).map((t) =>
+          t.name === table ? { ...t, columns: res.columns || [] } : t
+        );
+        return { ...prev, [db]: { ...dbEntry, tables } };
+      });
+    } catch {}
+  }, []);
 
   useEffect(() => {
     try { localStorage.setItem(STORAGE_KEY, sqlText); } catch {}
@@ -162,7 +198,20 @@ export function QueryEditor() {
   const toggleExpand = (key: string) => {
     setExpanded((prev) => {
       const next = new Set(prev);
-      if (next.has(key)) next.delete(key); else next.add(key);
+      if (next.has(key)) {
+        next.delete(key);
+      } else {
+        next.add(key);
+        if (key.startsWith("db:")) {
+          const db = key.slice(3);
+          if (!schemaData[db]?.tables) loadTables(db);
+        } else if (key.startsWith("tbl:")) {
+          const [dbTable] = key.slice(4).split(".");
+          const tbl = key.slice(4).slice(dbTable.length + 1);
+          const table = schemaData[dbTable]?.tables?.find((t) => t.name === tbl);
+          if (table && !table.columns) loadColumns(dbTable, tbl);
+        }
+      }
       return next;
     });
   };
@@ -182,14 +231,13 @@ export function QueryEditor() {
   };
 
   const buildSQLNamespace = (): SQLNamespace => {
-    if (!schema) return {};
     const ns: SQLNamespace = {};
-    for (const db of schema.databases) {
+    for (const db of databases) {
       const tables: { [table: string]: string[] } = {};
-      for (const t of db.tables || []) {
-        tables[t.name] = t.columns.map((c) => c.name);
+      for (const t of schemaData[db]?.tables || []) {
+        tables[t.name] = (t.columns || []).map((c) => c.name);
       }
-      ns[db.name] = tables;
+      ns[db] = tables;
     }
     return ns;
   };
@@ -204,7 +252,7 @@ export function QueryEditor() {
               Schema
             </div>
             <button
-              onClick={loadSchema}
+              onClick={loadDatabases}
               disabled={schemaLoading}
               className="rounded p-1 hover:bg-[var(--color-bg-tertiary)] disabled:opacity-50"
               title="Reload schema"
@@ -214,39 +262,42 @@ export function QueryEditor() {
           </div>
         </div>
         <div className="p-1">
-          {schema ? schema.databases.map((db) => (
-            <div key={db.name}>
+          {databases.length > 0 ? databases.map((dbName) => (
+            <div key={dbName}>
               <button
-                onClick={() => toggleExpand(`db:${db.name}`)}
+                onClick={() => toggleExpand(`db:${dbName}`)}
                 className="flex w-full items-center gap-1 rounded px-2 py-1 text-xs font-medium text-[var(--color-text-primary)] hover:bg-[var(--color-bg-tertiary)]"
               >
-                {expanded.has(`db:${db.name}`) ? <ChevronDown className="h-3 w-3 shrink-0" /> : <ChevronRight className="h-3 w-3 shrink-0" />}
-                <span className="truncate">{db.name}</span>
-                <span className="ml-auto shrink-0 text-[10px] text-[var(--color-text-secondary)]">{(db.tables || []).length}</span>
+                {expanded.has(`db:${dbName}`) ? <ChevronDown className="h-3 w-3 shrink-0" /> : <ChevronRight className="h-3 w-3 shrink-0" />}
+                <span className="truncate">{dbName}</span>
+                {schemaData[dbName]?.loading && <Loader2 className="ml-1 h-3 w-3 animate-spin shrink-0" />}
+                {!schemaData[dbName]?.loading && schemaData[dbName]?.tables && (
+                  <span className="ml-auto shrink-0 text-[10px] text-[var(--color-text-secondary)]">{schemaData[dbName].tables!.length}</span>
+                )}
               </button>
-              {expanded.has(`db:${db.name}`) && (db.tables || []).map((t) => (
+              {expanded.has(`db:${dbName}`) && (schemaData[dbName]?.tables || []).map((t) => (
                 <div key={t.name} className="group relative">
                   <div className="flex items-center">
                     <button
-                      onClick={() => toggleExpand(`tbl:${db.name}.${t.name}`)}
+                      onClick={() => toggleExpand(`tbl:${dbName}.${t.name}`)}
                       className="flex flex-1 min-w-0 items-center gap-1 rounded px-2 py-1 pl-5 text-xs text-[var(--color-text-primary)] hover:bg-[var(--color-bg-tertiary)]"
                     >
-                      {expanded.has(`tbl:${db.name}.${t.name}`) ? <ChevronDown className="h-3 w-3 shrink-0" /> : <ChevronRight className="h-3 w-3 shrink-0" />}
+                      {expanded.has(`tbl:${dbName}.${t.name}`) ? <ChevronDown className="h-3 w-3 shrink-0" /> : <ChevronRight className="h-3 w-3 shrink-0" />}
                       <Table2 className="h-3 w-3 shrink-0 text-[var(--color-text-secondary)]" />
                       <span className="truncate">{t.name}</span>
                       {t.row_count > 0 && <span className="ml-1 shrink-0 text-[10px] text-[var(--color-text-secondary)]">({formatNumber(t.row_count)})</span>}
                     </button>
                     <button
-                      onClick={() => setSQLText(`SELECT * FROM ${db.name}.${t.name}`)}
+                      onClick={() => setSQLText(`SELECT * FROM ${dbName}.${t.name}`)}
                       className="mr-1 shrink-0 rounded p-1 text-[var(--color-accent)] hover:bg-[var(--color-bg-tertiary)]"
                       title="SELECT * FROM"
                     >
                       <ExternalLink className="h-3 w-3" />
                     </button>
                   </div>
-                  {expanded.has(`tbl:${db.name}.${t.name}`) && (
+                  {expanded.has(`tbl:${dbName}.${t.name}`) && (
                     <div className="pl-10">
-                      {t.columns.map((c) => (
+                      {t.columns ? t.columns.map((c) => (
                         <button
                           key={c.name}
                           onClick={() => insertAtCursor(c.name)}
@@ -255,16 +306,24 @@ export function QueryEditor() {
                           <span className="truncate">{c.name}</span>
                           <span className="ml-auto shrink-0 text-[9px] opacity-60">{c.type}</span>
                         </button>
-                      ))}
+                      )) : (
+                        <div className="flex items-center gap-1 px-2 py-1 text-[10px] text-[var(--color-text-secondary)]">
+                          <Loader2 className="h-3 w-3 animate-spin" />
+                          Loading columns...
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
               ))}
+              {expanded.has(`db:${dbName}`) && !schemaData[dbName]?.tables && !schemaData[dbName]?.loading && (
+                <div className="px-5 py-1 text-[10px] text-[var(--color-text-secondary)]">Failed to load tables</div>
+              )}
             </div>
           )) : (
             <div className="flex items-center justify-center gap-2 px-3 py-6 text-xs text-[var(--color-text-secondary)]">
               {schemaLoading && <Loader2 className="h-3 w-3 animate-spin" />}
-              {schemaLoading ? "Loading schema..." : "Failed to load schema"}
+              {schemaLoading ? "Loading databases..." : "No databases found"}
             </div>
           )}
         </div>

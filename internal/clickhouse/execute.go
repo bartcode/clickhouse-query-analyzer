@@ -253,40 +253,29 @@ type SchemaInfo struct {
 	Databases []DatabaseInfo `json:"databases"`
 }
 
-func (c *Client) GetSchema(ctx context.Context) (*SchemaInfo, error) {
-	dbRows, err := c.conn.Query(ctx, "SELECT name FROM system.databases WHERE name NOT IN ('INFORMATION_SCHEMA', 'information_schema') ORDER BY name")
+func (c *Client) GetDatabases(ctx context.Context) ([]string, error) {
+	rows, err := c.conn.Query(ctx, "SELECT name FROM system.databases WHERE name NOT IN ('INFORMATION_SCHEMA', 'information_schema') ORDER BY name")
 	if err != nil {
 		return nil, fmt.Errorf("querying databases: %w", err)
 	}
-	var databases []DatabaseInfo
-	for dbRows.Next() {
+	defer rows.Close()
+	var databases []string
+	for rows.Next() {
 		var name string
-		if err := dbRows.Scan(&name); err != nil {
-			dbRows.Close()
+		if err := rows.Scan(&name); err != nil {
 			return nil, err
 		}
-		databases = append(databases, DatabaseInfo{Name: name})
+		databases = append(databases, name)
 	}
-	dbRows.Close()
-
-	for i := range databases {
-		tables, err := c.getTables(ctx, databases[i].Name)
-		if err != nil {
-			tables = []TableInfo{}
-		}
-		databases[i].Tables = tables
-	}
-
-	return &SchemaInfo{Databases: databases}, nil
+	return databases, nil
 }
 
-func (c *Client) getTables(ctx context.Context, database string) ([]TableInfo, error) {
+func (c *Client) GetTables(ctx context.Context, database string) ([]TableInfo, error) {
 	tRows, err := c.conn.Query(ctx, "SELECT name, engine, total_rows FROM system.tables WHERE database = ? ORDER BY name", database)
 	if err != nil {
 		return nil, err
 	}
 	defer tRows.Close()
-
 	var tables []TableInfo
 	for tRows.Next() {
 		var name, engine string
@@ -296,19 +285,10 @@ func (c *Client) getTables(ctx context.Context, database string) ([]TableInfo, e
 		}
 		tables = append(tables, TableInfo{Name: name, Engine: engine, RowCount: totalRows})
 	}
-
-	for i := range tables {
-		cols, err := c.getColumns(ctx, database, tables[i].Name)
-		if err != nil {
-			continue
-		}
-		tables[i].Columns = cols
-	}
-
 	return tables, nil
 }
 
-func (c *Client) getColumns(ctx context.Context, database, table string) ([]ColumnInfo, error) {
+func (c *Client) GetColumns(ctx context.Context, database, table string) ([]ColumnInfo, error) {
 	cRows, err := c.conn.Query(ctx, "SELECT name, type FROM system.columns WHERE database = ? AND table = ? ORDER BY position", database, table)
 	if err != nil {
 		return nil, err

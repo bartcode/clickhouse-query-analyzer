@@ -1,5 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { useParams } from "react-router-dom";
+import CodeMirror from "@uiw/react-codemirror";
+import { sql } from "@codemirror/lang-sql";
+import { oneDark } from "@codemirror/theme-one-dark";
 import {
   LineChart, Line, AreaChart, Area, BarChart, Bar,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
@@ -137,9 +140,15 @@ export function QueryDetail() {
 
       <div className="mb-4 rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-secondary)] p-4">
         <div className="mb-2 text-xs font-medium text-[var(--color-text-secondary)]">Query</div>
-        <pre className="max-h-40 overflow-auto whitespace-pre-wrap font-mono text-xs text-[var(--color-text-primary)]">
-          {query.query}
-        </pre>
+        <CodeMirror
+          value={query.query}
+          extensions={[sql()]}
+          theme={oneDark}
+          readOnly={true}
+          editable={false}
+          basicSetup={{ lineNumbers: true, foldGutter: false, highlightActiveLine: false }}
+          className="text-xs [&_.cm-editor]:max-h-40 [&_.cm-editor]:overflow-auto [&_.cm-scroller]:font-mono [&_.cm-scroller]:text-xs"
+        />
       </div>
 
       <div className="mb-4 flex gap-1 border-b border-[var(--color-border)]">
@@ -771,9 +780,10 @@ const KEY_PROFILE_EVENTS: [string, string, (v: number) => string][] = [
   ["QueryPlanOptimizeMicroseconds", "Plan Optimization", (v) => formatDuration(v / 1000)],
 ];
 
-function ThreadDetailPanel({ profile, loading, showAllEvents, onToggleEvents }: {
+function ThreadDetailPanel({ profile, loading, error, showAllEvents, onToggleEvents }: {
   profile: ThreadProfile | null;
   loading: boolean;
+  error: string;
   showAllEvents: boolean;
   onToggleEvents: () => void;
 }) {
@@ -781,7 +791,7 @@ function ThreadDetailPanel({ profile, loading, showAllEvents, onToggleEvents }: 
     return <div className="bg-[var(--color-bg-tertiary)] px-6 py-4 text-xs text-[var(--color-text-secondary)]">Loading thread profile...</div>;
   }
   if (!profile) {
-    return <div className="bg-[var(--color-bg-tertiary)] px-6 py-4 text-xs text-[var(--color-text-secondary)]">Failed to load thread profile.</div>;
+    return <div className="bg-[var(--color-bg-tertiary)] px-6 py-4 text-xs text-[var(--color-error)]">{error || "Failed to load thread profile."}</div>;
   }
 
   const selectivity = profile.profile_events["SelectedRows"] > 0 && profile.profile_events["FilterTransformPassedRows"] > 0
@@ -907,6 +917,7 @@ function ThreadBreakdownTab({ queryId, threads, pipelineStr }: { queryId: string
   const [selectedThread, setSelectedThread] = useState<number | null>(null);
   const [threadProfile, setThreadProfile] = useState<ThreadProfile | null>(null);
   const [profileLoading, setProfileLoading] = useState(false);
+  const [profileError, setProfileError] = useState("");
   const [showAllEvents, setShowAllEvents] = useState(false);
 
   useEffect(() => {
@@ -915,11 +926,12 @@ function ThreadBreakdownTab({ queryId, threads, pipelineStr }: { queryId: string
   }, [threads.length, queryId]);
 
   useEffect(() => {
-    if (selectedThread === null) { setThreadProfile(null); return; }
+    if (selectedThread === null) { setThreadProfile(null); setProfileError(""); return; }
     setProfileLoading(true);
+    setProfileError("");
     fetchThreadProfile(queryId, selectedThread)
-      .then(setThreadProfile)
-      .catch(() => setThreadProfile(null))
+      .then((p) => { setThreadProfile(p); setProfileError(""); })
+      .catch((e) => { setThreadProfile(null); setProfileError(e instanceof Error ? e.message : "Failed to load thread profile"); })
       .finally(() => setProfileLoading(false));
   }, [selectedThread, queryId]);
 
@@ -1016,7 +1028,7 @@ function ThreadBreakdownTab({ queryId, threads, pipelineStr }: { queryId: string
                     {isSelected && (
                       <tr key={`${t.thread_id}-detail`}>
                         <td colSpan={9} className="border-b border-[var(--color-border)] p-0">
-                          <ThreadDetailPanel profile={threadProfile} loading={profileLoading} showAllEvents={showAllEvents} onToggleEvents={() => setShowAllEvents(!showAllEvents)} />
+                          <ThreadDetailPanel profile={threadProfile} loading={profileLoading} error={profileError} showAllEvents={showAllEvents} onToggleEvents={() => setShowAllEvents(!showAllEvents)} />
                         </td>
                       </tr>
                     )}
