@@ -9,7 +9,7 @@ export interface ConnectionParams {
 const STORAGE_KEY = "ch-query-analyzer-connection";
 
 export const DEFAULT_CONNECTION: ConnectionParams = {
-  url: "clickhouse://localhost:19000",
+  url: "clickhouse://localhost:9000",
   user: "default",
   password: "",
   database: "system",

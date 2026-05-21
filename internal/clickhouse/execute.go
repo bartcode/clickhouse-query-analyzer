@@ -165,16 +165,17 @@ func columnsFromNamesTypes(names []string, types []string) []ColumnInfo {
 }
 
 func nativeToHTTPPort(nativePort string) string {
-	const offset = 9000 - 8123
 	switch nativePort {
 	case "9000", "":
 		return "8123"
+	case "9440":
+		return "8443"
 	default:
 		n, err := strconv.Atoi(nativePort)
 		if err != nil {
 			return "8123"
 		}
-		return fmt.Sprintf("%d", n-offset)
+		return fmt.Sprintf("%d", n-877)
 	}
 }
 
