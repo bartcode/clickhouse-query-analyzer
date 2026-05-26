@@ -40,6 +40,7 @@ export function QueryDetail() {
   const [tab, setTab] = useState<Tab>("overview");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [flameError, setFlameError] = useState("");
   const [flameData, setFlameData] = useState<FlameGraphData[]>([]);
   const [profileEventFilter, setProfileEventFilter] = useState("");
 
@@ -84,7 +85,10 @@ export function QueryDetail() {
     try {
       const data = await fetchFlameGraph(queryId);
       setFlameData(data);
-    } catch {}
+      setFlameError("");
+    } catch (e) {
+      setFlameError(e instanceof Error ? e.message : "Failed to load flame graph");
+    }
   };
 
   const loadFlameGraphWithType = async (type: string) => {
@@ -92,7 +96,10 @@ export function QueryDetail() {
     try {
       const data = await fetchFlameGraph(queryId, type);
       setFlameData(data);
-    } catch {}
+      setFlameError("");
+    } catch (e) {
+      setFlameError(e instanceof Error ? e.message : "Failed to load flame graph");
+    }
   };
 
   if (loading) {
@@ -322,16 +329,33 @@ export function QueryDetail() {
           </div>
           {flameData.length === 0 ? (
             <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-secondary)] p-6 text-center text-sm text-[var(--color-text-secondary)]">
-              <p>No trace data available for this query.</p>
-              <p className="mt-1 text-xs opacity-70">
-                Trace data requires the query to have been executed while sampling profilers were enabled.
-                Try running a heavy query in the SQL editor, e.g.:
-              </p>
-              <pre className="mt-2 inline-block rounded bg-[var(--color-bg-primary)] px-3 py-2 text-left font-mono text-xs text-[var(--color-text-primary)]">
-                SELECT count() FROM analytics.events GROUP BY city, browser, device
-              </pre>
-              <SettingHint settings={query.settings} settingKey="query_profiler_real_time_period_ns" label="Real-time profiler" />
-              <SettingHint settings={query.settings} settingKey="query_profiler_cpu_time_period_ns" label="CPU profiler" />
+              {flameError && flameError.toLowerCase().includes("trace_log") ? (
+                <>
+                  <p className="font-medium text-[var(--color-warning)]">trace_log is not enabled on this ClickHouse server</p>
+                  <p className="mt-2 text-xs opacity-80">
+                    Add the following to your <code className="rounded bg-[var(--color-bg-primary)] px-1">config.xml</code>:
+                  </p>
+                  <pre className="mt-2 inline-block rounded bg-[var(--color-bg-primary)] px-3 py-2 text-left font-mono text-xs text-[var(--color-text-primary)]">
+{`<trace_log>
+    <database>system</database>
+    <table>trace_log</table>
+    <flush_interval_milliseconds>1000</flush_interval_milliseconds>
+</trace_log>`}
+                  </pre>
+                  <p className="mt-2 text-xs opacity-80">
+                    Then enable sampling profilers in the SQL Editor Settings panel (real_time_profiler, cpu_profiler).
+                  </p>
+                </>
+              ) : (
+                <>
+                  <p>No trace data available for this query.</p>
+                  <p className="mt-1 text-xs opacity-70">
+                    Trace data requires: (1) <code className="rounded bg-[var(--color-bg-primary)] px-1">trace_log</code> enabled in ClickHouse config, and (2) sampling profilers enabled at query time.
+                  </p>
+                  <SettingHint settings={query.settings} settingKey="query_profiler_real_time_period_ns" label="Real-time profiler" />
+                  <SettingHint settings={query.settings} settingKey="query_profiler_cpu_time_period_ns" label="CPU profiler" />
+                </>
+              )}
             </div>
           ) : (
             <FlameGraph data={flameData} />
@@ -344,6 +368,12 @@ export function QueryDetail() {
               <li>Hover over any bar to see the full function name and sample count.</li>
               <li>Wider bars indicate functions consuming more resources. Narrow bars can be ignored.</li>
               <li>Use the buttons above to switch between Memory (Sampled), Memory (Alloc), and Memory (Peak) views.</li>
+            </ul>
+            <p className="mt-2 font-medium text-[var(--color-text-primary)]">Requirements</p>
+            <ul className="mt-1 list-inside list-disc space-y-0.5 opacity-80">
+              <li><code className="rounded bg-[var(--color-bg-primary)] px-1">trace_log</code> must be enabled in ClickHouse <code className="rounded bg-[var(--color-bg-primary)] px-1">config.xml</code></li>
+              <li>Sampling profilers must be enabled at query time (Settings panel in SQL Editor)</li>
+              <li><code className="rounded bg-[var(--color-bg-primary)] px-1">allow_introspection_functions</code> must be enabled for symbol resolution</li>
             </ul>
           </div>
         </ChartSection>
@@ -441,7 +471,8 @@ export function QueryDetail() {
 
 function settingEnabled(settings: Record<string, string> | undefined, key: string): boolean {
   if (!settings) return false;
-  return settings[key] === "1";
+  const v = settings[key];
+  return v !== undefined && v !== "0";
 }
 
 function SettingHint({ settings, settingKey, label }: { settings: Record<string, string> | undefined; settingKey: string; label: string }) {
@@ -1301,7 +1332,11 @@ function MemoryTab({ query, metrics }: { query: QueryLogEntry; metrics: MetricPo
         <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-secondary)] p-8 text-center text-sm text-[var(--color-text-secondary)]">
           No detailed memory data available.
           <br />
-          <span className="text-xs">Enable query_metric_log and memory profiler for detailed analysis.</span>
+          <span className="text-xs">
+            Requires <code className="rounded bg-[var(--color-bg-primary)] px-1">query_metric_log</code> enabled in ClickHouse config
+            and <code className="rounded bg-[var(--color-bg-primary)] px-1">log_queries</code> enabled at query time.
+          </span>
+          <SettingHint settings={query.settings} settingKey="log_queries" label="log_queries" />
         </div>
       )}
     </div>

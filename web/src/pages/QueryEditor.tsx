@@ -6,14 +6,16 @@ import { oneDark } from "@codemirror/theme-one-dark";
 import { keymap } from "@codemirror/view";
 import { acceptCompletion } from "@codemirror/autocomplete";
 import { format as sqlFormat } from "sql-formatter";
-import { Play, Database, ChevronRight, ChevronDown, Loader2, ExternalLink, Table2, Square, Copy, Check, RefreshCw, Settings2, ChevronLeft, ChevronRightIcon, Plus, X, ArrowUp, ArrowDown } from "lucide-react";
+import { Play, Database, ChevronRight, ChevronDown, Loader2, ExternalLink, Table2, Square, Copy, Check, RefreshCw, Settings2, ChevronLeft, ChevronRightIcon, Plus, X, ArrowUp, ArrowDown, AlertTriangle } from "lucide-react";
 import { executeQuery, fetchDatabases, fetchTables, fetchColumns } from "../api/client";
 import type { QueryResult } from "../api/types";
 import { formatNumber } from "../utils";
 import { useTheme } from "../api/theme";
-
-type TableData = { name: string; engine: string; row_count: number; columns?: { name: string; type: string }[] };
-type SchemaData = { [db: string]: { tables?: TableData[]; loading?: boolean } };
+import {
+  getCachedDatabases, getCachedSchemaData, setCachedDatabases, setCachedSchemaData,
+  updateSchemaDb, invalidateSchema, isSchemaStale, extractDatabaseNames,
+} from "../api/schema-cache";
+import type { SchemaData } from "../api/schema-cache";
 
 interface EditorTab {
   id: string;
@@ -353,9 +355,10 @@ export function QueryEditor() {
   const [activeTabId, setActiveTabId] = useState(() => {
     try { return localStorage.getItem(ACTIVE_TAB_KEY) || tabs[0]?.id; } catch { return tabs[0]?.id; }
   });
-  const [databases, setDatabases] = useState<string[]>([]);
-  const [schemaData, setSchemaData] = useState<SchemaData>({});
-  const [schemaLoading, setSchemaLoading] = useState(false);
+  const [databases, setDatabases] = useState<string[]>(getCachedDatabases);
+  const [schemaData, setSchemaData] = useState<SchemaData>(getCachedSchemaData);
+  const [schemaLoading, setSchemaLoading] = useState(getCachedDatabases().length === 0);
+  const [schemaStale, setSchemaStale] = useState(isSchemaStale);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [elapsed, setElapsed] = useState(0);
   const [showSettings, setShowSettings] = useState(false);
@@ -379,12 +382,15 @@ export function QueryEditor() {
     updateTab(activeTab.id, { sql });
   }, [activeTab.id, updateTab]);
 
-  const loadDatabases = useCallback(() => {
+  const loadDatabases = useCallback((force = false) => {
+    if (!force && getCachedDatabases().length > 0) return;
     setSchemaLoading(true);
     fetchDatabases()
       .then((d) => {
-        setDatabases(d.databases || []);
-        setSchemaData({});
+        const dbs = d.databases || [];
+        setDatabases(dbs);
+        setCachedDatabases(dbs);
+        setSchemaStale(false);
       })
       .catch(() => {})
       .finally(() => setSchemaLoading(false));
@@ -393,34 +399,37 @@ export function QueryEditor() {
   useEffect(() => { loadDatabases(); }, [loadDatabases]);
 
   const loadTables = useCallback(async (db: string) => {
-    setSchemaData((prev) => {
-      if (prev[db]?.tables) return prev;
-      return { ...prev, [db]: { ...prev[db], loading: true } };
-    });
+    const current = getCachedSchemaData();
+    if (current[db]?.tables) return;
+    setSchemaData((prev) => ({ ...prev, [db]: { ...prev[db], loading: true } }));
     try {
       const res = await fetchTables(db);
-      setSchemaData((prev) => ({
-        ...prev,
-        [db]: { tables: res.tables || [], loading: false },
-      }));
+      const entry = { tables: res.tables || [], loading: false };
+      setSchemaData((prev) => ({ ...prev, [db]: entry }));
+      updateSchemaDb(db, entry);
     } catch {
-      setSchemaData((prev) => ({ ...prev, [db]: { ...prev[db], loading: false } }));
+      const entry = { loading: false };
+      setSchemaData((prev) => ({ ...prev, [db]: { ...prev[db], ...entry } }));
+      updateSchemaDb(db, entry);
     }
   }, []);
 
   useEffect(() => {
-    if (databases.length === 0) return;
+    const cached = getCachedSchemaData();
+    const dbsToLoad = extractDatabaseNames(sqlText).filter(
+      (db) => databases.includes(db) && !cached[db]?.tables
+    );
+    if (dbsToLoad.length === 0) return;
     let cancelled = false;
-    const loadAllTables = async () => {
-      for (const db of databases) {
+    const load = async () => {
+      for (const db of dbsToLoad) {
         if (cancelled) break;
-        if (schemaData[db]?.tables) continue;
         await loadTables(db);
       }
     };
-    loadAllTables();
+    load();
     return () => { cancelled = true; };
-  }, [databases]);
+  }, [sqlText, databases, loadTables]);
 
   const loadColumns = useCallback(async (db: string, table: string) => {
     try {
@@ -430,7 +439,9 @@ export function QueryEditor() {
         const tables = (dbEntry.tables || []).map((t) =>
           t.name === table ? { ...t, columns: res.columns || [] } : t
         );
-        return { ...prev, [db]: { ...dbEntry, tables } };
+        const updated = { ...prev, [db]: { ...dbEntry, tables } };
+        setCachedSchemaData(updated);
+        return updated;
       });
     } catch {}
   }, []);
@@ -579,7 +590,10 @@ export function QueryEditor() {
         next.delete(key);
       } else {
         next.add(key);
-        if (key.startsWith("tbl:")) {
+        if (key.startsWith("db:")) {
+          const db = key.slice(3);
+          if (!schemaData[db]?.tables) loadTables(db);
+        } else if (key.startsWith("tbl:")) {
           const [dbTable] = key.slice(4).split(".");
           const tbl = key.slice(4).slice(dbTable.length + 1);
           const table = schemaData[dbTable]?.tables?.find((t) => t.name === tbl);
@@ -649,12 +663,13 @@ export function QueryEditor() {
               Schema
             </div>
             <button
-              onClick={loadDatabases}
+              onClick={() => { invalidateSchema(); setSchemaData({}); loadDatabases(true); }}
               disabled={schemaLoading}
-              className="rounded p-1 hover:bg-[var(--color-bg-tertiary)] disabled:opacity-50"
+              className="flex items-center gap-1 rounded p-1 hover:bg-[var(--color-bg-tertiary)] disabled:opacity-50"
               title="Reload schema"
             >
               <RefreshCw className={`h-3 w-3 ${schemaLoading ? "animate-spin" : ""}`} />
+              {schemaStale && !schemaLoading && <AlertTriangle className="h-3 w-3 text-[var(--color-warning)]" />}
             </button>
           </div>
         </div>
