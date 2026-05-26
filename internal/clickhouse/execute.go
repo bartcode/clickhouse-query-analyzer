@@ -27,7 +27,7 @@ type QueryResult struct {
 	QueryID  string             `json:"query_id"`
 }
 
-func (c *Client) ExecuteQuery(ctx context.Context, query string, maxRows int) (*QueryResult, error) {
+func (c *Client) ExecuteQuery(ctx context.Context, query string, maxRows int, settings map[string]string) (*QueryResult, error) {
 	if maxRows <= 0 {
 		maxRows = 1000
 	}
@@ -46,6 +46,9 @@ func (c *Client) ExecuteQuery(ctx context.Context, query string, maxRows int) (*
 	q := u.Query()
 	q.Set("max_result_rows", fmt.Sprintf("%d", maxRows))
 	q.Set("result_overflow_mode", "break")
+	for k, v := range settings {
+		q.Set(k, v)
+	}
 	u.RawQuery = q.Encode()
 
 	body := bytes.NewBufferString(query)

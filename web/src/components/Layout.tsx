@@ -1,9 +1,10 @@
-import { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link, Outlet, useLocation } from "react-router-dom";
-import { Activity, Plug, Unplug, Loader2, AlertCircle, Radio, GitCompare, Code } from "lucide-react";
+import { Activity, Plug, Unplug, Loader2, AlertCircle, Radio, GitCompare, Code, Sun, Moon } from "lucide-react";
 import type { ConnectionParams } from "../api/connection";
 import { setConnectionHeaders } from "../api/connection";
 import { testConnection } from "../api/client";
+import { ThemeContext } from "../api/theme";
 
 export function Layout({
   connection,
@@ -21,6 +22,22 @@ export function Layout({
   const [params, setParams] = useState<ConnectionParams>(connection);
   const [testing, setTesting] = useState(false);
   const [error, setError] = useState("");
+  const [theme, setTheme] = useState<"dark" | "light">(() => {
+    try { return (localStorage.getItem("ch-theme") as "dark" | "light") || "dark"; } catch { return "dark"; }
+  });
+
+  const toggleTheme = () => {
+    setTheme((prev) => {
+      const next = prev === "dark" ? "light" : "dark";
+      document.documentElement.setAttribute("data-theme", next);
+      try { localStorage.setItem("ch-theme", next); } catch {}
+      return next;
+    });
+  };
+
+  useEffect(() => {
+    document.documentElement.setAttribute("data-theme", theme);
+  }, [theme]);
 
   const handleConnect = async () => {
     setTesting(true);
@@ -46,41 +63,59 @@ export function Layout({
       <nav className="border-b border-[var(--color-border)] bg-[var(--color-bg-secondary)]">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="flex h-14 items-center justify-between">
-            <Link to="/" className="flex items-center gap-2 text-white no-underline">
+            <Link to="/" className="flex items-center gap-2 text-[var(--color-text-primary)] no-underline">
               <Activity className="h-6 w-6 text-[var(--color-accent)]" />
               <span className="text-lg font-semibold">ClickHouse Query Analyzer</span>
             </Link>
             <div className="flex items-center gap-4 text-sm">
               {connected && (
                 <>
-                  <Link to="/editor" className="flex items-center gap-1 no-underline text-[var(--color-text-secondary)] hover:text-white">
+                  <Link to="/editor" className="flex items-center gap-1 no-underline text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]">
                     <Code className="h-3.5 w-3.5" />
                     Editor
                   </Link>
-                  <Link to="/live" className="flex items-center gap-1 no-underline text-[var(--color-text-secondary)] hover:text-white">
+                  <Link to="/live" className="flex items-center gap-1 no-underline text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]">
                     <Radio className="h-3.5 w-3.5" />
                     Live
                   </Link>
-                  <Link to="/compare" className="flex items-center gap-1 no-underline text-[var(--color-text-secondary)] hover:text-white">
+                  <Link to="/compare" className="flex items-center gap-1 no-underline text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]">
                     <GitCompare className="h-3.5 w-3.5" />
                     Compare
                   </Link>
                 </>
               )}
               {connected && location.pathname !== "/" && (
-                <Link to="/" className="hover:text-white no-underline text-[var(--color-text-secondary)]">
+                <Link to="/" className="hover:text-[var(--color-text-primary)] no-underline text-[var(--color-text-secondary)]">
                   &larr; Queries
                 </Link>
               )}
               {connected && !editing && (
-                <button
-                  onClick={() => { onDisconnect(); setEditing(true); }}
-                  className="flex items-center gap-1 text-[var(--color-text-secondary)] hover:text-white"
-                >
-                  <Unplug className="h-3.5 w-3.5" />
-                  <span className="hidden sm:inline">{params.user}@{params.url.replace(/^[a-z]+:\/\//, "")}</span>
-                </button>
+                <>
+                  <button
+                    onClick={toggleTheme}
+                    className="rounded p-1 text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]"
+                    title={theme === "dark" ? "Switch to light theme" : "Switch to dark theme"}
+                  >
+                    {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+                  </button>
+                  <button
+                    onClick={() => { onDisconnect(); setEditing(true); }}
+                    className="flex items-center gap-1 text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]"
+                  >
+                    <Unplug className="h-3.5 w-3.5" />
+                    <span className="hidden sm:inline">{params.user}@{params.url.replace(/^[a-z]+:\/\//, "")}</span>
+                  </button>
+                </>
               )}
+              {!connected || editing ? (
+                <button
+                  onClick={toggleTheme}
+                  className="rounded p-1 text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]"
+                  title={theme === "dark" ? "Switch to light theme" : "Switch to dark theme"}
+                >
+                  {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+                </button>
+              ) : null}
             </div>
           </div>
         </div>
@@ -151,7 +186,9 @@ export function Layout({
       )}
 
       <main>
-        <Outlet />
+        <ThemeContext.Provider value={theme}>
+          <Outlet />
+        </ThemeContext.Provider>
       </main>
     </div>
   );

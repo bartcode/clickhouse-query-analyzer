@@ -17,7 +17,8 @@
     "react": "^19.2.6",
     "react-dom": "^19.2.6",
     "react-router-dom": "^7.15.1",
-    "recharts": "^3.8.1"
+    "recharts": "^3.8.1",
+    "sql-formatter": "^15.8.0"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.3.0",

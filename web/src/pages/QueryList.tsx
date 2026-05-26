@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { Search, Filter, ChevronLeft, ChevronRight, Clock, MemoryStick, Database, Plug, GitCompare } from "lucide-react";
+import { Search, Filter, ChevronLeft, ChevronRight, Clock, MemoryStick, Database, Plug, GitCompare, ArrowUp, ArrowDown } from "lucide-react";
 import { fetchQueries } from "../api/client";
 import type { QueryListParams, QueryLogEntry } from "../api/types";
 import { formatDuration, formatBytes, formatNumber, formatTime, durationColor, memoryColor } from "../utils";
@@ -92,7 +92,7 @@ export function QueryList({ connected }: { connected: boolean }) {
           className={`flex items-center gap-2 rounded-lg border px-4 py-2 text-sm ${
             showFilters
               ? "border-[var(--color-accent)] bg-[var(--color-accent)] text-white"
-              : "border-[var(--color-border)] bg-[var(--color-bg-secondary)] text-[var(--color-text-secondary)] hover:text-white"
+              : "border-[var(--color-border)] bg-[var(--color-bg-secondary)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]"
           }`}
         >
           <Filter className="h-4 w-4" />
@@ -101,7 +101,7 @@ export function QueryList({ connected }: { connected: boolean }) {
       </div>
 
       {showFilters && (
-        <div className="mb-4 grid grid-cols-4 gap-3 rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-secondary)] p-4">
+        <div className="mb-4 grid grid-cols-5 gap-3 rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-secondary)] p-4">
           <div>
             <label className="mb-1 block text-xs text-[var(--color-text-secondary)]">Query Kind</label>
             <select
@@ -138,17 +138,27 @@ export function QueryList({ connected }: { connected: boolean }) {
             />
           </div>
           <div>
-            <label className="mb-1 block text-xs text-[var(--color-text-secondary)]">Sort By</label>
+            <label className="mb-1 block text-xs text-[var(--color-text-secondary)]">Min Bytes Read</label>
+            <input
+              type="text"
+              value={params.min_read_bytes || ""}
+              onChange={(e) => {
+                const v = e.target.value ? Number(e.target.value) : undefined;
+                setParams((p) => ({ ...p, min_read_bytes: v, offset: 0 }));
+              }}
+              placeholder="e.g. 1048576"
+              className="w-full rounded border border-[var(--color-border)] bg-[var(--color-bg-primary)] px-3 py-1.5 text-sm text-[var(--color-text-primary)] outline-none"
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-xs text-[var(--color-text-secondary)]">Sort Direction</label>
             <select
-              value={params.sort_by}
-              onChange={(e) => setParams((p) => ({ ...p, sort_by: e.target.value, offset: 0 }))}
+              value={params.sort_dir}
+              onChange={(e) => setParams((p) => ({ ...p, sort_dir: e.target.value as "ASC" | "DESC", offset: 0 }))}
               className="w-full rounded border border-[var(--color-border)] bg-[var(--color-bg-primary)] px-3 py-1.5 text-sm text-[var(--color-text-primary)] outline-none"
             >
-              <option value="query_start_time">Time</option>
-              <option value="query_duration_ms">Duration</option>
-              <option value="memory_usage">Memory</option>
-              <option value="read_rows">Rows Read</option>
-              <option value="read_bytes">Bytes Read</option>
+              <option value="DESC">Descending</option>
+              <option value="ASC">Ascending</option>
             </select>
           </div>
         </div>
@@ -172,7 +182,7 @@ export function QueryList({ connected }: { connected: boolean }) {
           </button>
           <button
             onClick={() => setSelected(new Set())}
-            className="text-xs text-[var(--color-text-secondary)] hover:text-white"
+            className="text-xs text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]"
           >
             Clear
           </button>
@@ -184,13 +194,25 @@ export function QueryList({ connected }: { connected: boolean }) {
           <thead>
             <tr className="border-b border-[var(--color-border)] bg-[var(--color-bg-secondary)]">
               <th className="w-10 px-2 py-3"></th>
-              <th className="px-4 py-3 text-left font-medium text-[var(--color-text-secondary)]">Time</th>
-              <th className="px-4 py-3 text-left font-medium text-[var(--color-text-secondary)]">Duration</th>
-              <th className="px-4 py-3 text-right font-medium text-[var(--color-text-secondary)]">Memory</th>
-              <th className="px-4 py-3 text-right font-medium text-[var(--color-text-secondary)]">Rows Read</th>
-              <th className="px-4 py-3 text-right font-medium text-[var(--color-text-secondary)]">Bytes Read</th>
-              <th className="px-4 py-3 text-left font-medium text-[var(--color-text-secondary)]">User</th>
-              <th className="px-4 py-3 text-left font-medium text-[var(--color-text-secondary)]">Query</th>
+              {[["query_start_time", "Time", "left"], ["query_duration_ms", "Duration", "left"], ["memory_usage", "Memory", "right"], ["read_rows", "Rows Read", "right"], ["read_bytes", "Bytes Read", "right"], ["user", "User", "left"], [null, "Query", "left"] as const].map(([col, label, align]) => (
+                <th
+                  key={label}
+                  onClick={() => col && setParams((p) => ({
+                    ...p,
+                    sort_by: col,
+                    sort_dir: p.sort_by === col && p.sort_dir === "DESC" ? "ASC" : "DESC",
+                    offset: 0,
+                  }))}
+                  className={`px-4 py-3 font-medium text-[var(--color-text-secondary)] ${align === "right" ? "text-right" : "text-left"} ${col ? "cursor-pointer select-none hover:text-[var(--color-text-primary)]" : ""}`}
+                >
+                  <span className="inline-flex items-center gap-1">
+                    {label}
+                    {col && params.sort_by === col && (
+                      params.sort_dir === "DESC" ? <ArrowDown className="h-3 w-3" /> : <ArrowUp className="h-3 w-3" />
+                    )}
+                  </span>
+                </th>
+              ))}
             </tr>
           </thead>
           <tbody>
@@ -266,7 +288,7 @@ export function QueryList({ connected }: { connected: boolean }) {
             <button
               disabled={(params.offset || 0) === 0}
               onClick={() => setParams((p) => ({ ...p, offset: Math.max(0, (p.offset || 0) - (p.limit || 50)) }))}
-              className="flex items-center gap-1 rounded border border-[var(--color-border)] bg-[var(--color-bg-secondary)] px-3 py-1.5 text-sm text-[var(--color-text-secondary)] hover:text-white disabled:opacity-50"
+              className="flex items-center gap-1 rounded border border-[var(--color-border)] bg-[var(--color-bg-secondary)] px-3 py-1.5 text-sm text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] disabled:opacity-50"
             >
               <ChevronLeft className="h-4 w-4" />
               Previous
@@ -274,7 +296,7 @@ export function QueryList({ connected }: { connected: boolean }) {
             <button
               disabled={currentPage >= totalPages}
               onClick={() => setParams((p) => ({ ...p, offset: (p.offset || 0) + (p.limit || 50) }))}
-              className="flex items-center gap-1 rounded border border-[var(--color-border)] bg-[var(--color-bg-secondary)] px-3 py-1.5 text-sm text-[var(--color-text-secondary)] hover:text-white disabled:opacity-50"
+              className="flex items-center gap-1 rounded border border-[var(--color-border)] bg-[var(--color-bg-secondary)] px-3 py-1.5 text-sm text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] disabled:opacity-50"
             >
               Next
               <ChevronRight className="h-4 w-4" />

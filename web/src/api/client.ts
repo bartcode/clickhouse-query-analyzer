@@ -93,11 +93,11 @@ export async function fetchThreadProfile(queryId: string, threadId: number): Pro
   return fetchJSON<ThreadProfile>(`${BASE}/queries/${encodeURIComponent(queryId)}/threads/${threadId}/profile`);
 }
 
-export async function executeQuery(query: string, maxRows = 1000): Promise<QueryResult> {
+export async function executeQuery(query: string, maxRows = 1000, settings?: Record<string, string>): Promise<QueryResult> {
   return fetchJSON<QueryResult>(`${BASE}/execute`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ query, max_rows: maxRows }),
+    body: JSON.stringify({ query, max_rows: maxRows, settings }),
   });
 }
 

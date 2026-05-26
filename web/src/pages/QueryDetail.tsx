@@ -8,6 +8,7 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
   PieChart, Pie, Cell,
 } from "recharts";
+import { useTheme } from "../api/theme";
 import { Clock, MemoryStick, HardDrive, Database, Cpu, Play, Layers, Eye, Cloud, ChevronDown, ChevronRight } from "lucide-react";
 import { fetchQuery, fetchQueryMetrics, fetchQueryThreads, fetchQueryViews, fetchExplain, fetchFlameGraph, fetchThreadSummaries, fetchThreadProfile } from "../api/client";
 import type { QueryLogEntry, MetricPoint, ThreadEntry, ViewLogEntry, ExplainResult, FlameGraphData, ThreadSummary, ThreadProfile } from "../api/types";
@@ -29,6 +30,8 @@ type Tab = "overview" | "memory" | "threads" | "storage" | "flamegraph" | "expla
 
 export function QueryDetail() {
   const { queryId } = useParams<{ queryId: string }>();
+  const theme = useTheme();
+  const cmTheme = theme === "dark" ? oneDark : undefined;
   const [query, setQuery] = useState<QueryLogEntry | null>(null);
   const [metrics, setMetrics] = useState<MetricPoint[]>([]);
   const [threads, setThreads] = useState<ThreadEntry[]>([]);
@@ -143,7 +146,7 @@ export function QueryDetail() {
         <CodeMirror
           value={query.query}
           extensions={[sql()]}
-          theme={oneDark}
+          theme={cmTheme}
           readOnly={true}
           editable={false}
           basicSetup={{ lineNumbers: true, foldGutter: false, highlightActiveLine: false }}
@@ -163,7 +166,7 @@ export function QueryDetail() {
             className={`px-4 py-2 text-sm capitalize ${
               tab === t
                 ? "border-b-2 border-[var(--color-accent)] text-[var(--color-accent)]"
-                : "text-[var(--color-text-secondary)] hover:text-white"
+                  : "text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]"
             }`}
           >
             {t}
@@ -178,11 +181,11 @@ export function QueryDetail() {
               <ChartSection title="Memory Usage Over Time">
                 <ResponsiveContainer width="100%" height={280}>
                   <AreaChart data={metricData}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
-                    <XAxis dataKey="time" tick={{ fontSize: 11 }} stroke="#64748b" />
-                    <YAxis tickFormatter={(v: number) => formatBytes(v)} tick={{ fontSize: 11 }} stroke="#64748b" width={80} />
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
+                    <XAxis dataKey="time" tick={{ fontSize: 11 }} stroke="var(--color-text-secondary)" />
+                    <YAxis tickFormatter={(v: number) => formatBytes(v)} tick={{ fontSize: 11 }} stroke="var(--color-text-secondary)" width={80} />
                     <Tooltip
-                      contentStyle={{ background: "#1e293b", border: "1px solid #475569", borderRadius: 8, fontSize: 12 }}
+                      contentStyle={{ backgroundColor: "var(--color-bg-secondary)", border: "1px solid var(--color-border)", borderRadius: 8, fontSize: 12 }}
                       labelFormatter={labelFmt((l) => `Time: ${l}`)}
                       formatter={tooltipFmt(formatBytes)}
                     />
@@ -195,11 +198,11 @@ export function QueryDetail() {
               <ChartSection title="CPU Time Over Time">
                 <ResponsiveContainer width="100%" height={280}>
                   <AreaChart data={metricData}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
-                    <XAxis dataKey="time" tick={{ fontSize: 11 }} stroke="#64748b" />
-                    <YAxis tickFormatter={(v: number) => formatDuration(v / 1000)} tick={{ fontSize: 11 }} stroke="#64748b" width={80} />
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
+                    <XAxis dataKey="time" tick={{ fontSize: 11 }} stroke="var(--color-text-secondary)" />
+                    <YAxis tickFormatter={(v: number) => formatDuration(v / 1000)} tick={{ fontSize: 11 }} stroke="var(--color-text-secondary)" width={80} />
                     <Tooltip
-                      contentStyle={{ background: "#1e293b", border: "1px solid #475569", borderRadius: 8, fontSize: 12 }}
+                      contentStyle={{ backgroundColor: "var(--color-bg-secondary)", border: "1px solid var(--color-border)", borderRadius: 8, fontSize: 12 }}
                       labelFormatter={labelFmt((l) => `Time: ${l}`)}
                       formatter={tooltipFmt((v) => formatDuration(v / 1000))}
                     />
@@ -212,11 +215,11 @@ export function QueryDetail() {
               <ChartSection title="I/O Over Time">
                 <ResponsiveContainer width="100%" height={280}>
                   <AreaChart data={metricData}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
-                    <XAxis dataKey="time" tick={{ fontSize: 11 }} stroke="#64748b" />
-                    <YAxis tickFormatter={(v: number) => formatBytes(v)} tick={{ fontSize: 11 }} stroke="#64748b" width={80} />
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
+                    <XAxis dataKey="time" tick={{ fontSize: 11 }} stroke="var(--color-text-secondary)" />
+                    <YAxis tickFormatter={(v: number) => formatBytes(v)} tick={{ fontSize: 11 }} stroke="var(--color-text-secondary)" width={80} />
                     <Tooltip
-                      contentStyle={{ background: "#1e293b", border: "1px solid #475569", borderRadius: 8, fontSize: 12 }}
+                      contentStyle={{ backgroundColor: "var(--color-bg-secondary)", border: "1px solid var(--color-border)", borderRadius: 8, fontSize: 12 }}
                       labelFormatter={labelFmt((l) => `Time: ${l}`)}
                       formatter={tooltipFmt(formatBytes)}
                     />
@@ -230,11 +233,11 @@ export function QueryDetail() {
               <ChartSection title="Network Over Time">
                 <ResponsiveContainer width="100%" height={280}>
                   <LineChart data={metricData}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
-                    <XAxis dataKey="time" tick={{ fontSize: 11 }} stroke="#64748b" />
-                    <YAxis tickFormatter={(v: number) => formatBytes(v)} tick={{ fontSize: 11 }} stroke="#64748b" width={80} />
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
+                    <XAxis dataKey="time" tick={{ fontSize: 11 }} stroke="var(--color-text-secondary)" />
+                    <YAxis tickFormatter={(v: number) => formatBytes(v)} tick={{ fontSize: 11 }} stroke="var(--color-text-secondary)" width={80} />
                     <Tooltip
-                      contentStyle={{ background: "#1e293b", border: "1px solid #475569", borderRadius: 8, fontSize: 12 }}
+                      contentStyle={{ backgroundColor: "var(--color-bg-secondary)", border: "1px solid var(--color-border)", borderRadius: 8, fontSize: 12 }}
                       labelFormatter={labelFmt((l) => `Time: ${l}`)}
                       formatter={tooltipFmt(formatBytes)}
                     />
@@ -250,6 +253,7 @@ export function QueryDetail() {
               No time-series metric data available for this query.
               <br />
               <span className="text-xs">This may be because query_metric_log is not enabled or the query was too fast to sample.</span>
+              <SettingHint settings={query.settings} settingKey="log_queries" label="log_queries" />
             </div>
           )}
 
@@ -292,7 +296,7 @@ export function QueryDetail() {
       )}
 
       {tab === "threads" && (
-        <ThreadBreakdownTab queryId={query.query_id} threads={threads} pipelineStr={explain?.pipeline} />
+        <ThreadBreakdownTab queryId={query.query_id} threads={threads} pipelineStr={explain?.pipeline} querySettings={query.settings} />
       )}
 
       {tab === "memory" && (
@@ -326,10 +330,22 @@ export function QueryDetail() {
               <pre className="mt-2 inline-block rounded bg-[var(--color-bg-primary)] px-3 py-2 text-left font-mono text-xs text-[var(--color-text-primary)]">
                 SELECT count() FROM analytics.events GROUP BY city, browser, device
               </pre>
+              <SettingHint settings={query.settings} settingKey="query_profiler_real_time_period_ns" label="Real-time profiler" />
+              <SettingHint settings={query.settings} settingKey="query_profiler_cpu_time_period_ns" label="CPU profiler" />
             </div>
           ) : (
             <FlameGraph data={flameData} />
           )}
+          <div className="mt-3 rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-secondary)] p-3 text-xs text-[var(--color-text-secondary)]">
+            <p className="font-medium text-[var(--color-text-primary)]">How to read this graph</p>
+            <ul className="mt-1 list-inside list-disc space-y-0.5 opacity-80">
+              <li>Each bar represents a function. Width shows relative time or memory (by sample count).</li>
+              <li>The stack grows upward: bottom is the entry point, top is the deepest nested call.</li>
+              <li>Hover over any bar to see the full function name and sample count.</li>
+              <li>Wider bars indicate functions consuming more resources. Narrow bars can be ignored.</li>
+              <li>Use the buttons above to switch between Memory (Sampled), Memory (Alloc), and Memory (Peak) views.</li>
+            </ul>
+          </div>
         </ChartSection>
       )}
 
@@ -423,40 +439,138 @@ export function QueryDetail() {
   );
 }
 
+function settingEnabled(settings: Record<string, string> | undefined, key: string): boolean {
+  if (!settings) return false;
+  return settings[key] === "1";
+}
+
+function SettingHint({ settings, settingKey, label }: { settings: Record<string, string> | undefined; settingKey: string; label: string }) {
+  if (settingEnabled(settings, settingKey)) return null;
+  return (
+    <p className="mt-2 text-xs text-[var(--color-warning)]">
+      {label} was disabled for this query. Re-run with it enabled in the SQL Editor&apos;s Settings panel for richer data.
+    </p>
+  );
+}
+
 function StorageTab({ events }: { events: Record<string, number> }) {
   const storageEvents = extractStorageEvents(events);
-  const hasData = [
-    storageEvents.apiOps,
-    storageEvents.readWrite,
-    storageEvents.throughput,
-    storageEvents.throttlers,
-    storageEvents.remoteFs,
-    storageEvents.cache,
-  ].some((arr) => arr.length > 0);
-
-  if (!hasData) {
-    return (
-      <div className="flex flex-col items-center gap-4 py-16">
-        <Cloud className="h-10 w-10 text-[var(--color-text-secondary)]" />
-        <p className="text-sm text-[var(--color-text-secondary)]">No remote storage interactions detected for this query.</p>
-        <p className="max-w-md text-center text-xs text-[var(--color-text-secondary)]">
-          This tab shows S3, Azure, and other remote storage metrics when the query reads from or writes to
-          external storage (S3 tables, URL engine, DiskS3, DiskAzure, etc.).
-        </p>
-      </div>
-    );
-  }
 
   return (
     <div className="space-y-6">
+      {storageEvents.diskIO.length > 0 && (
+        <ChartSection title="Disk I/O">
+          <div className="overflow-hidden rounded-lg border border-[var(--color-border)]">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-[var(--color-border)] bg-[var(--color-bg-primary)]">
+                  <th className="px-4 py-2 text-left font-medium text-[var(--color-text-secondary)]">Metric</th>
+                  <th className="px-4 py-2 text-right font-medium text-[var(--color-text-secondary)]">Read</th>
+                  <th className="px-4 py-2 text-right font-medium text-[var(--color-text-secondary)]">Write</th>
+                </tr>
+              </thead>
+              <tbody>
+                {storageEvents.diskIO.map((dio) => (
+                  <tr key={dio.label} className="border-b border-[var(--color-border)] last:border-0">
+                    <td className="px-4 py-2 text-xs font-medium">{dio.label}</td>
+                    <td className="px-4 py-2 text-right font-mono text-xs">{dio.read > 0 ? dio.readFmt(dio.read) : "-"}</td>
+                    <td className="px-4 py-2 text-right font-mono text-xs">{dio.write > 0 ? dio.writeFmt(dio.write) : "-"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </ChartSection>
+      )}
+
+      {storageEvents.compression.length > 0 && (
+        <ChartSection title="Compression">
+          <ResponsiveContainer width="100%" height={storageEvents.compression.length * 40 + 40}>
+            <BarChart data={storageEvents.compression} layout="vertical">
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
+              <XAxis type="number" tick={{ fontSize: 11 }} stroke="var(--color-text-secondary)" tickFormatter={(v: number) => formatBytes(v)} />
+              <YAxis dataKey="name" type="category" width={160} tick={{ fontSize: 10 }} stroke="var(--color-text-secondary)" />
+              <Tooltip contentStyle={{ backgroundColor: "var(--color-bg-secondary)", border: "1px solid var(--color-border)", borderRadius: 8, fontSize: 12 }} formatter={(v) => formatBytes(Number(v))} />
+              <Bar dataKey="compressed" fill="#3b82f6" name="Compressed" />
+              <Bar dataKey="uncompressed" fill="#60a5fa" name="Uncompressed" />
+              <Legend />
+            </BarChart>
+          </ResponsiveContainer>
+        </ChartSection>
+      )}
+
+      {storageEvents.fileOps.length > 0 && (
+        <ChartSection title="File Operations">
+          <div className="overflow-hidden rounded-lg border border-[var(--color-border)]">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-[var(--color-border)] bg-[var(--color-bg-primary)]">
+                  <th className="px-4 py-2 text-left font-medium text-[var(--color-text-secondary)]">Metric</th>
+                  <th className="px-4 py-2 text-right font-medium text-[var(--color-text-secondary)]">Value</th>
+                </tr>
+              </thead>
+              <tbody>
+                {storageEvents.fileOps.map(([name, value]) => (
+                  <tr key={name} className="border-b border-[var(--color-border)] last:border-0">
+                    <td className="px-4 py-2 text-xs">{name}</td>
+                    <td className="px-4 py-2 text-right font-mono text-xs">{formatNumber(value)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </ChartSection>
+      )}
+
+      {storageEvents.cache.length > 0 && (
+        <ChartSection title="Filesystem Cache">
+          <div className="overflow-hidden rounded-lg border border-[var(--color-border)]">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-[var(--color-border)] bg-[var(--color-bg-primary)]">
+                  <th className="px-4 py-2 text-left font-medium text-[var(--color-text-secondary)]">Metric</th>
+                  <th className="px-4 py-2 text-right font-medium text-[var(--color-text-secondary)]">Value</th>
+                </tr>
+              </thead>
+              <tbody>
+                {storageEvents.cache.map(([name, value]) => (
+                  <tr key={name} className="border-b border-[var(--color-border)] last:border-0">
+                    <td className="px-4 py-2 text-xs">{name}</td>
+                    <td className="px-4 py-2 text-right font-mono text-xs">
+                      {name.toLowerCase().includes("bytes") ? formatBytes(value) :
+                       name.toLowerCase().includes("microseconds") ? formatDuration(value / 1000) :
+                       formatNumber(value)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </ChartSection>
+      )}
+
+      {storageEvents.remoteFs.length > 0 && (
+        <ChartSection title="Remote Filesystem / Prefetch">
+          <ResponsiveContainer width="100%" height={280}>
+            <BarChart data={storageEvents.remoteFs} layout="vertical">
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
+              <XAxis type="number" tick={{ fontSize: 11 }} stroke="var(--color-text-secondary)" allowDecimals={false} />
+              <YAxis dataKey="name" type="category" width={180} tick={{ fontSize: 10 }} stroke="var(--color-text-secondary)" />
+              <Tooltip contentStyle={{ backgroundColor: "var(--color-bg-secondary)", border: "1px solid var(--color-border)", borderRadius: 8, fontSize: 12 }} />
+              <Bar dataKey="value" fill="#3b82f6" />
+            </BarChart>
+          </ResponsiveContainer>
+        </ChartSection>
+      )}
+
       {storageEvents.apiOps.length > 0 && (
         <ChartSection title="API Operations">
           <ResponsiveContainer width="100%" height={280}>
             <BarChart data={storageEvents.apiOps}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
-              <XAxis dataKey="name" tick={{ fontSize: 10 }} stroke="#64748b" interval={0} angle={-30} textAnchor="end" height={80} />
-              <YAxis tick={{ fontSize: 11 }} stroke="#64748b" allowDecimals={false} />
-              <Tooltip contentStyle={{ background: "#1e293b", border: "1px solid #475569", borderRadius: 8, fontSize: 12 }} />
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
+              <XAxis dataKey="name" tick={{ fontSize: 10 }} stroke="var(--color-text-secondary)" interval={0} angle={-30} textAnchor="end" height={80} />
+              <YAxis tick={{ fontSize: 11 }} stroke="var(--color-text-secondary)" allowDecimals={false} />
+              <Tooltip contentStyle={{ backgroundColor: "var(--color-bg-secondary)", border: "1px solid var(--color-border)", borderRadius: 8, fontSize: 12 }} />
               <Bar dataKey="s3" fill="#3b82f6" name="S3" />
               <Bar dataKey="diskS3" fill="#60a5fa" name="DiskS3" />
               <Bar dataKey="azure" fill="#f59e0b" name="Azure" />
@@ -468,7 +582,7 @@ function StorageTab({ events }: { events: Record<string, number> }) {
       )}
 
       {storageEvents.readWrite.length > 0 && (
-        <ChartSection title="Read/Write Requests">
+        <ChartSection title="Remote Storage Read/Write">
           <div className="overflow-hidden rounded-lg border border-[var(--color-border)]">
             <table className="w-full text-sm">
               <thead>
@@ -503,7 +617,7 @@ function StorageTab({ events }: { events: Record<string, number> }) {
       )}
 
       {storageEvents.throughput.length > 0 && (
-        <ChartSection title="Throughput">
+        <ChartSection title="Remote Storage Throughput">
           <div className="overflow-hidden rounded-lg border border-[var(--color-border)]">
             <table className="w-full text-sm">
               <thead>
@@ -562,45 +676,15 @@ function StorageTab({ events }: { events: Record<string, number> }) {
         </ChartSection>
       )}
 
-      {storageEvents.remoteFs.length > 0 && (
-        <ChartSection title="Remote Filesystem / Prefetch">
-          <ResponsiveContainer width="100%" height={280}>
-            <BarChart data={storageEvents.remoteFs} layout="vertical">
-              <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
-              <XAxis type="number" tick={{ fontSize: 11 }} stroke="#64748b" allowDecimals={false} />
-              <YAxis dataKey="name" type="category" width={180} tick={{ fontSize: 10 }} stroke="#64748b" />
-              <Tooltip contentStyle={{ background: "#1e293b", border: "1px solid #475569", borderRadius: 8, fontSize: 12 }} />
-              <Bar dataKey="value" fill="#3b82f6" />
-            </BarChart>
-          </ResponsiveContainer>
-        </ChartSection>
-      )}
-
-      {storageEvents.cache.length > 0 && (
-        <ChartSection title="Filesystem Cache">
-          <div className="overflow-hidden rounded-lg border border-[var(--color-border)]">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-[var(--color-border)] bg-[var(--color-bg-primary)]">
-                  <th className="px-4 py-2 text-left font-medium text-[var(--color-text-secondary)]">Metric</th>
-                  <th className="px-4 py-2 text-right font-medium text-[var(--color-text-secondary)]">Value</th>
-                </tr>
-              </thead>
-              <tbody>
-                {storageEvents.cache.map(([name, value]) => (
-                  <tr key={name} className="border-b border-[var(--color-border)] last:border-0">
-                    <td className="px-4 py-2 text-xs">{name}</td>
-                    <td className="px-4 py-2 text-right font-mono text-xs">
-                      {name.toLowerCase().includes("bytes") ? formatBytes(value) :
-                       name.toLowerCase().includes("microseconds") ? formatDuration(value / 1000) :
-                       formatNumber(value)}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </ChartSection>
+      {!storageEvents.diskIO.length && !storageEvents.compression.length && !storageEvents.fileOps.length &&
+       !storageEvents.cache.length && !storageEvents.remoteFs.length && !storageEvents.apiOps.length && (
+        <div className="flex flex-col items-center gap-4 py-16">
+          <Cloud className="h-10 w-10 text-[var(--color-text-secondary)]" />
+          <p className="text-sm text-[var(--color-text-secondary)]">No storage I/O data available for this query.</p>
+          <p className="max-w-md text-center text-xs text-[var(--color-text-secondary)]">
+            This tab shows disk I/O, compression, filesystem cache, and remote storage metrics.
+          </p>
+        </div>
       )}
     </div>
   );
@@ -630,13 +714,30 @@ interface StorageThrottler {
   sleepUs: number;
 }
 
+interface StorageDiskIO {
+  label: string;
+  read: number;
+  write: number;
+  readFmt: (v: number) => string;
+  writeFmt: (v: number) => string;
+}
+
+interface StorageCompression {
+  name: string;
+  compressed: number;
+  uncompressed: number;
+}
+
 interface StorageExtracted {
+  diskIO: StorageDiskIO[];
+  compression: StorageCompression[];
+  fileOps: [string, number][];
+  cache: [string, number][];
+  remoteFs: { name: string; value: number }[];
   apiOps: { name: string; s3: number; diskS3: number; azure: number; diskAzure: number }[];
   readWrite: StorageReadWrite[];
   throughput: StorageThroughput[];
   throttlers: StorageThrottler[];
-  remoteFs: { name: string; value: number }[];
-  cache: [string, number][];
 }
 
 const S3_API_OPS = [
@@ -655,6 +756,44 @@ function getVal(events: Record<string, number>, key: string): number {
 }
 
 function extractStorageEvents(events: Record<string, number>): StorageExtracted {
+  const diskIO: StorageDiskIO[] = [];
+  const diskIORows: [string, string, string, string, (v: number) => string, (v: number) => string][] = [
+    ["Elapsed", "Elapsed Time", "DiskReadElapsedMicroseconds", "DiskWriteElapsedMicroseconds", (v: number) => formatDuration(v / 1000), (v: number) => formatDuration(v / 1000)],
+    ["Bytes", "Bytes", "DiskReadBytes", "DiskWriteBytes", formatBytes, formatBytes],
+  ];
+  for (const [, label, readKey, writeKey, readFmt, writeFmt] of diskIORows) {
+    const read = getVal(events, readKey);
+    const write = getVal(events, writeKey);
+    if (read > 0 || write > 0) {
+      diskIO.push({ label, read, write, readFmt, writeFmt });
+    }
+  }
+
+  const compression: StorageCompression[] = [];
+  const compressionPairs: [string, string, string][] = [
+    ["ReadCompressedBytes", "Read (Compressed/Uncompressed)", "UncompressedReadBufferBytes"],
+    ["WriteCompressedBytes", "Write (Compressed/Uncompressed)", "UncompressedWriteBufferBytes"],
+  ];
+  for (const [compKey, name, uncompKey] of compressionPairs) {
+    const compressed = getVal(events, compKey);
+    const uncompressed = getVal(events, uncompKey);
+    if (compressed > 0 || uncompressed > 0) {
+      compression.push({ name, compressed, uncompressed });
+    }
+  }
+
+  const fileOpsKeys = [
+    "FileOpen", "FileOpenFailed", "SeekCount", "ReadCompressedBytes",
+    "CreatedReadBufferOrdinary", "CreatedReadBufferDirectIO", "CreatedReadBufferMMap",
+    "CreatedWriteBufferOrdinary", "CreatedWriteBufferDirectIO",
+    "IOBufferAllocBytes", "IOBufferAllocs",
+    "ArenaAllocBytes", "ArenaAllocChunks",
+    "MMappedFileCacheHits", "MMappedFileCacheMisses",
+  ];
+  const fileOps = fileOpsKeys
+    .map((k) => [k, getVal(events, k)] as [string, number])
+    .filter(([, v]) => v > 0);
+
   const apiOpsMap = new Map<string, { s3: number; diskS3: number; azure: number; diskAzure: number }>();
 
   for (const op of S3_API_OPS) {
@@ -737,7 +876,7 @@ function extractStorageEvents(events: Record<string, number>): StorageExtracted 
     .map((k) => [k, getVal(events, k)] as [string, number])
     .filter(([, v]) => v > 0);
 
-  return { apiOps, readWrite, throughput, throttlers, remoteFs, cache };
+  return { diskIO, compression, fileOps, cache, remoteFs, apiOps, readWrite, throughput, throttlers };
 }
 
 function parsePipeline(pipelineStr: string): { name: string; count: number }[] {
@@ -912,7 +1051,7 @@ function ThreadDetailPanel({ profile, loading, error, showAllEvents, onToggleEve
   );
 }
 
-function ThreadBreakdownTab({ queryId, threads, pipelineStr }: { queryId: string; threads: ThreadEntry[]; pipelineStr?: string }) {
+function ThreadBreakdownTab({ queryId, threads, pipelineStr, querySettings }: { queryId: string; threads: ThreadEntry[]; pipelineStr?: string; querySettings?: Record<string, string> }) {
   const [threadSummaries, setThreadSummaries] = useState<ThreadSummary[]>([]);
   const [selectedThread, setSelectedThread] = useState<number | null>(null);
   const [threadProfile, setThreadProfile] = useState<ThreadProfile | null>(null);
@@ -954,7 +1093,8 @@ function ThreadBreakdownTab({ queryId, threads, pipelineStr }: { queryId: string
   if (threadSummaries.length === 0) {
     return (
       <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-secondary)] p-8 text-center text-sm text-[var(--color-text-secondary)]">
-        No thread data available for this query. This can happen if log_query_threads is not enabled or the query was too fast.
+        No thread data available for this query.
+        <SettingHint settings={querySettings} settingKey="log_query_threads" label="log_query_threads" />
       </div>
     );
   }
@@ -1086,11 +1226,11 @@ function MemoryTab({ query, metrics }: { query: QueryLogEntry; metrics: MetricPo
         <ChartSection title="Memory Usage Over Time">
           <ResponsiveContainer width="100%" height={300}>
             <AreaChart data={memOverTime}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
-              <XAxis dataKey="time" tick={{ fontSize: 11 }} stroke="#64748b" />
-              <YAxis tickFormatter={(v: number) => formatBytes(v)} tick={{ fontSize: 11 }} stroke="#64748b" width={80} />
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
+              <XAxis dataKey="time" tick={{ fontSize: 11 }} stroke="var(--color-text-secondary)" />
+              <YAxis tickFormatter={(v: number) => formatBytes(v)} tick={{ fontSize: 11 }} stroke="var(--color-text-secondary)" width={80} />
               <Tooltip
-                contentStyle={{ background: "#1e293b", border: "1px solid #475569", borderRadius: 8, fontSize: 12 }}
+                contentStyle={{ backgroundColor: "var(--color-bg-secondary)", border: "1px solid var(--color-border)", borderRadius: 8, fontSize: 12 }}
                 formatter={tooltipFmt(formatBytes)}
               />
               <Area type="monotone" dataKey="memory" stroke="#3b82f6" fill="#3b82f680" name="Current" />
@@ -1124,7 +1264,7 @@ function MemoryTab({ query, metrics }: { query: QueryLogEntry; metrics: MetricPo
                     ))}
                   </Pie>
                   <Tooltip
-                    contentStyle={{ background: "#1e293b", border: "1px solid #475569", borderRadius: 8, fontSize: 12 }}
+                    contentStyle={{ backgroundColor: "var(--color-bg-secondary)", border: "1px solid var(--color-border)", borderRadius: 8, fontSize: 12 }}
                     formatter={tooltipFmt(formatBytes)}
                   />
                 </PieChart>

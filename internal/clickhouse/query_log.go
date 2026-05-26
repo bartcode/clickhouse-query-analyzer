@@ -44,8 +44,9 @@ type QueryListParams struct {
 	ToTime      string `json:"to_time"`
 	User        string `json:"user"`
 	QueryKind   string `json:"query_kind"`
-	MinDuration uint64 `json:"min_duration"`
-	MinMemory   uint64 `json:"min_memory"`
+	MinDuration  uint64 `json:"min_duration"`
+	MinMemory    uint64 `json:"min_memory"`
+	MinReadBytes uint64 `json:"min_read_bytes"`
 	Search      string `json:"search"`
 	SortBy      string `json:"sort_by"`
 	SortDir     string `json:"sort_dir"`
@@ -99,6 +100,10 @@ func (c *Client) ListQueries(ctx context.Context, params QueryListParams) ([]Que
 	if params.MinMemory > 0 {
 		where += " AND memory_usage >= ?"
 		args = append(args, params.MinMemory)
+	}
+	if params.MinReadBytes > 0 {
+		where += " AND read_bytes >= ?"
+		args = append(args, params.MinReadBytes)
 	}
 	if params.Search != "" {
 		where += " AND query ILIKE ?"

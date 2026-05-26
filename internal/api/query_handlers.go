@@ -44,6 +44,9 @@ func (a *API) ListQueries(w http.ResponseWriter, r *http.Request) {
 	if v := r.URL.Query().Get("min_memory"); v != "" {
 		params.MinMemory, _ = strconv.ParseUint(v, 10, 64)
 	}
+	if v := r.URL.Query().Get("min_read_bytes"); v != "" {
+		params.MinReadBytes, _ = strconv.ParseUint(v, 10, 64)
+	}
 	if v := r.URL.Query().Get("limit"); v != "" {
 		params.Limit, _ = strconv.Atoi(v)
 	}
@@ -334,8 +337,9 @@ func (a *API) ExecuteQuery(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var req struct {
-		Query   string `json:"query"`
-		MaxRows int    `json:"max_rows"`
+		Query    string            `json:"query"`
+		MaxRows  int               `json:"max_rows"`
+		Settings map[string]string `json:"settings"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid request body")
@@ -349,7 +353,7 @@ func (a *API) ExecuteQuery(w http.ResponseWriter, r *http.Request) {
 		req.MaxRows = 1000
 	}
 
-	result, err := ch.ExecuteQuery(r.Context(), req.Query, req.MaxRows)
+	result, err := ch.ExecuteQuery(r.Context(), req.Query, req.MaxRows, req.Settings)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return

@@ -105,13 +105,20 @@ export function FlameGraph({ data }: { data: { name: string; value: number }[] }
       ctx.fillRect(x, y, w, ROW_HEIGHT);
 
       if (w > 30) {
-        ctx.fillStyle = "#fff";
+        ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue("--color-text-primary").trim() || "#fff";
         ctx.font = "11px monospace";
+        const maxTextWidth = w - 8;
+        let label = node.name;
+        if (ctx.measureText(label).width > maxTextWidth) {
+          while (label.length > 0 && ctx.measureText(label + "...").width > maxTextWidth) {
+            label = label.slice(0, -1);
+          }
+          label += "...";
+        }
         ctx.save();
         ctx.beginPath();
         ctx.rect(x + 2, y, w - 4, ROW_HEIGHT);
         ctx.clip();
-        const label = node.name.length > 40 ? node.name.slice(0, 37) + "..." : node.name;
         ctx.fillText(label, x + 4, y + 14);
         ctx.restore();
       }
@@ -162,7 +169,7 @@ export function FlameGraph({ data }: { data: { name: string; value: number }[] }
       <canvas ref={canvasRef} className="w-full cursor-pointer rounded" onMouseMove={handleMouseMove} onMouseLeave={() => { setHoveredIdx(-1); setTooltip(null); }} />
       {tooltip && (
         <div
-          className="pointer-events-none fixed z-50 rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-primary)] px-3 py-2 text-xs shadow-lg"
+          className="pointer-events-none absolute z-50 rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-primary)] px-3 py-2 text-xs shadow-lg"
           style={{ left: tooltip.x + 12, top: tooltip.y - 40 }}
         >
           <p className="max-w-xs truncate font-mono text-[var(--color-text-primary)]">{tooltip.name}</p>
