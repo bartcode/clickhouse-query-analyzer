@@ -227,19 +227,6 @@ func (c *Client) httpURL() (string, error) {
 	return u.String(), nil
 }
 
-func (c *Client) getColumnTypes(ctx context.Context, query string) (cols []ColumnInfo, err error) {
-	limitQuery := fmt.Sprintf("SELECT * FROM (%s) LIMIT 0", query)
-	rows, err := c.conn.Query(ctx, limitQuery)
-	if err != nil {
-		return nil, fmt.Errorf("getting column types: %w", err)
-	}
-	defer rows.Close()
-	for _, ct := range rows.ColumnTypes() {
-		cols = append(cols, ColumnInfo{Name: ct.Name(), Type: ct.DatabaseTypeName()})
-	}
-	return cols, nil
-}
-
 type TableInfo struct {
 	Name     string       `json:"name"`
 	Engine   string       `json:"engine"`

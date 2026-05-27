@@ -1,4 +1,4 @@
-.PHONY: dev dev-backend dev-frontend build clean docker dev-clickhouse seed
+.PHONY: dev dev-backend dev-frontend build clean docker dev-clickhouse seed test test-unit test-integration lint vulncheck fmt-check tidy-check
 
 BINARY := clickhouse-query-analyzer
 VERSION := $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
@@ -51,3 +51,28 @@ seed:
 		sleep 1; \
 	done
 	docker exec -i dev-clickhouse-1 clickhouse-client < dev/seed.sql
+
+test: test-unit
+
+test-unit:
+	go test -race -count=1 ./internal/...
+
+test-integration:
+	go test -race -count=1 -tags=integration ./tests/integration/...
+
+lint:
+	golangci-lint run ./...
+
+vulncheck:
+	govulncheck ./...
+
+fmt-check:
+	@test -z "$$(gofmt -l .)"
+
+tidy-check:
+	@go mod tidy && git diff --exit-code go.mod go.sum
+
+coverage:
+	go test -race -coverprofile=coverage.out ./internal/...
+	go tool cover -html=coverage.out -o coverage.html
+	@echo "Coverage report written to coverage.html"

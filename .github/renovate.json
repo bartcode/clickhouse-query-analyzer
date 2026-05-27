@@ -1,0 +1,49 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended"
+  ],
+  "timezone": "UTC",
+  "schedule": ["on monday"],
+  "labels": ["dependencies"],
+  "reviewers": ["team:core"],
+  "postUpdateOptions": ["gomodTidy"],
+  "packageRules": [
+    {
+      "matchManagers": ["gomod"],
+      "commitMessagePrefix": "go: ",
+      "semanticCommitType": "deps"
+    },
+    {
+      "matchManagers": ["npm"],
+      "commitMessagePrefix": "npm: ",
+      "semanticCommitType": "deps"
+    },
+    {
+      "matchManagers": ["github-actions"],
+      "commitMessagePrefix": "ci: ",
+      "semanticCommitType": "deps"
+    },
+    {
+      "matchUpdateTypes": ["patch"],
+      "groupName": "patch updates",
+      "automerge": true,
+      "automergeType": "pr"
+    },
+    {
+      "matchUpdateTypes": ["minor"],
+      "groupName": "minor updates",
+      "rangeStrategy": "bump"
+    },
+    {
+      "matchUpdateTypes": ["major"],
+      "rangeStrategy": "bump"
+    }
+  ],
+  "vulnerabilityAlerts": {
+    "labels": ["security"],
+    "automerge": true,
+    "automergeType": "pr"
+  },
+  "osvVulnerabilityAlerts": true
+}

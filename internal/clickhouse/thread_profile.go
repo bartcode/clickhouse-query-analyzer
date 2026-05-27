@@ -30,12 +30,12 @@ type ThreadProfile struct {
 }
 
 func inferRole(pe map[string]uint64, threadName string) string {
-	switch {
-	case threadName == "TCPHandler":
+	switch threadName {
+	case "TCPHandler":
 		return "Coordinator"
-	case threadName == "QueryPullPipeEx":
+	case "QueryPullPipeEx":
 		return "Pipeline Manager"
-	case threadName == "ThreadPoolRead":
+	case "ThreadPoolRead":
 		return "I/O Pool"
 	}
 

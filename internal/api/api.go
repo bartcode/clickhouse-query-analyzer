@@ -51,7 +51,7 @@ func (a *API) clientFromRequest(r *http.Request) (*clickhouse.Client, error) {
 		params.Database = "system"
 	}
 	if params.URL == "" {
-		return nil, fmt.Errorf("ClickHouse URL not configured. Provide X-CH-URL header or configure connection in the UI.")
+		return nil, fmt.Errorf("ClickHouse URL not configured. Provide X-CH-URL header or configure connection in the UI")
 	}
 	return a.pool.Get(r.Context(), params)
 }
