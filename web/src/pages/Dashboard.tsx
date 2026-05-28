@@ -136,7 +136,9 @@ export function Dashboard() {
                 <th className="pb-1.5 text-left text-xs font-medium text-[var(--color-text-secondary)]">Database</th>
                 <th className="pb-1.5 text-right text-xs font-medium text-[var(--color-text-secondary)]">Tables</th>
                 <th className="pb-1.5 text-right text-xs font-medium text-[var(--color-text-secondary)]">Rows</th>
-                <th className="pb-1.5 text-right text-xs font-medium text-[var(--color-text-secondary)]">Size</th>
+                <th className="pb-1.5 text-right text-xs font-medium text-[var(--color-text-secondary)]">Compressed</th>
+                <th className="pb-1.5 text-right text-xs font-medium text-[var(--color-text-secondary)]">Uncompressed</th>
+                <th className="pb-1.5 text-right text-xs font-medium text-[var(--color-text-secondary)]">Ratio</th>
               </tr>
             </thead>
             <tbody>
@@ -145,7 +147,9 @@ export function Dashboard() {
                   <td className="py-1.5 text-xs">{d.database}</td>
                   <td className="py-1.5 text-right font-mono text-xs text-[var(--color-text-secondary)]">{d.tables}</td>
                   <td className="py-1.5 text-right font-mono text-xs text-[var(--color-text-secondary)]">{formatNumber(d.rows)}</td>
-                  <td className="py-1.5 text-right font-mono text-xs">{formatBytes(d.bytes)}</td>
+                  <td className="py-1.5 text-right font-mono text-xs">{formatBytes(d.compressed_bytes)}</td>
+                  <td className="py-1.5 text-right font-mono text-xs text-[var(--color-text-secondary)]">{formatBytes(d.uncompressed_bytes)}</td>
+                  <td className="py-1.5 text-right font-mono text-xs text-[var(--color-text-secondary)]">{d.compressed_bytes > 0 ? (d.uncompressed_bytes / d.compressed_bytes).toFixed(1) + "x" : "-"}</td>
                 </tr>
               ))}
             </tbody>
@@ -158,8 +162,9 @@ export function Dashboard() {
               <tr className="border-b border-[var(--color-border)]">
                 <th className="pb-1.5 text-left text-xs font-medium text-[var(--color-text-secondary)]">Table</th>
                 <th className="pb-1.5 text-right text-xs font-medium text-[var(--color-text-secondary)]">Parts</th>
-                <th className="pb-1.5 text-right text-xs font-medium text-[var(--color-text-secondary)]">Rows</th>
-                <th className="pb-1.5 text-right text-xs font-medium text-[var(--color-text-secondary)]">Size</th>
+                <th className="pb-1.5 text-right text-xs font-medium text-[var(--color-text-secondary)]">Compressed</th>
+                <th className="pb-1.5 text-right text-xs font-medium text-[var(--color-text-secondary)]">Uncompressed</th>
+                <th className="pb-1.5 text-right text-xs font-medium text-[var(--color-text-secondary)]">Ratio</th>
               </tr>
             </thead>
             <tbody>
@@ -169,8 +174,9 @@ export function Dashboard() {
                     <span className="text-[var(--color-text-secondary)]">{t.database}.</span>{t.table}
                   </td>
                   <td className="py-1.5 text-right font-mono text-xs text-[var(--color-text-secondary)]">{formatNumber(t.parts)}</td>
-                  <td className="py-1.5 text-right font-mono text-xs text-[var(--color-text-secondary)]">{formatNumber(t.rows)}</td>
-                  <td className="py-1.5 text-right font-mono text-xs">{formatBytes(t.bytes)}</td>
+                  <td className="py-1.5 text-right font-mono text-xs">{formatBytes(t.compressed_bytes)}</td>
+                  <td className="py-1.5 text-right font-mono text-xs text-[var(--color-text-secondary)]">{formatBytes(t.uncompressed_bytes)}</td>
+                  <td className="py-1.5 text-right font-mono text-xs text-[var(--color-text-secondary)]">{t.compressed_bytes > 0 ? (t.uncompressed_bytes / t.compressed_bytes).toFixed(1) + "x" : "-"}</td>
                 </tr>
               ))}
             </tbody>
@@ -186,7 +192,8 @@ export function Dashboard() {
                 <th className="pb-1.5 text-left text-xs font-medium text-[var(--color-text-secondary)]">Table</th>
                 <th className="pb-1.5 text-right text-xs font-medium text-[var(--color-text-secondary)]">Parts</th>
                 <th className="pb-1.5 text-right text-xs font-medium text-[var(--color-text-secondary)]">Rows</th>
-                <th className="pb-1.5 text-right text-xs font-medium text-[var(--color-text-secondary)]">Size</th>
+                <th className="pb-1.5 text-right text-xs font-medium text-[var(--color-text-secondary)]">Compressed</th>
+                <th className="pb-1.5 text-right text-xs font-medium text-[var(--color-text-secondary)]">Ratio</th>
               </tr>
             </thead>
             <tbody>
@@ -197,7 +204,8 @@ export function Dashboard() {
                   </td>
                   <td className={`py-1.5 text-right font-mono text-xs ${t.parts > 100 ? "text-[var(--color-warning)]" : ""}`}>{formatNumber(t.parts)}</td>
                   <td className="py-1.5 text-right font-mono text-xs text-[var(--color-text-secondary)]">{formatNumber(t.rows)}</td>
-                  <td className="py-1.5 text-right font-mono text-xs text-[var(--color-text-secondary)]">{formatBytes(t.bytes)}</td>
+                  <td className="py-1.5 text-right font-mono text-xs">{formatBytes(t.compressed_bytes)}</td>
+                  <td className="py-1.5 text-right font-mono text-xs text-[var(--color-text-secondary)]">{t.compressed_bytes > 0 ? (t.uncompressed_bytes / t.compressed_bytes).toFixed(1) + "x" : "-"}</td>
                 </tr>
               ))}
             </tbody>

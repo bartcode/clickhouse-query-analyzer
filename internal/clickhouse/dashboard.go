@@ -16,18 +16,20 @@ type SystemEvent struct {
 }
 
 type DatabaseSize struct {
-	Database string `json:"database"`
-	Tables   uint64 `json:"tables"`
-	Rows     uint64 `json:"rows"`
-	Bytes    uint64 `json:"bytes"`
+	Database         string `json:"database"`
+	Tables           uint64 `json:"tables"`
+	Rows             uint64 `json:"rows"`
+	CompressedBytes  uint64 `json:"compressed_bytes"`
+	UncompressedBytes uint64 `json:"uncompressed_bytes"`
 }
 
 type PartSummary struct {
-	Database string `json:"database"`
-	Table    string `json:"table"`
-	Parts    uint64 `json:"parts"`
-	Rows     uint64 `json:"rows"`
-	Bytes    uint64 `json:"bytes"`
+	Database          string `json:"database"`
+	Table             string `json:"table"`
+	Parts             uint64 `json:"parts"`
+	Rows              uint64 `json:"rows"`
+	CompressedBytes   uint64 `json:"compressed_bytes"`
+	UncompressedBytes uint64 `json:"uncompressed_bytes"`
 }
 
 type ReplicationQueueEntry struct {
@@ -143,10 +145,11 @@ func (c *Client) queryDatabaseSizes(ctx context.Context, d *DashboardData) error
 		database,
 		countDistinct(table) AS tables,
 		sum(rows) AS rows,
-		sum(bytes_on_disk) AS bytes
+		sum(bytes_on_disk) AS compressed_bytes,
+		sum(data_uncompressed_bytes) AS uncompressed_bytes
 	FROM %s WHERE active
 	GROUP BY database
-	ORDER BY bytes DESC
+	ORDER BY compressed_bytes DESC
 	LIMIT 20`, table)
 
 	rows, err := c.conn.Query(ctx, query)
@@ -157,7 +160,7 @@ func (c *Client) queryDatabaseSizes(ctx context.Context, d *DashboardData) error
 
 	for rows.Next() {
 		var ds DatabaseSize
-		if err := rows.Scan(&ds.Database, &ds.Tables, &ds.Rows, &ds.Bytes); err != nil {
+		if err := rows.Scan(&ds.Database, &ds.Tables, &ds.Rows, &ds.CompressedBytes, &ds.UncompressedBytes); err != nil {
 			return err
 		}
 		d.DatabaseSizes = append(d.DatabaseSizes, ds)
@@ -174,7 +177,8 @@ func (c *Client) queryTopTables(ctx context.Context, d *DashboardData) error {
 		database, table,
 		count() AS parts,
 		sum(rows) AS rows,
-		sum(bytes_on_disk) AS bytes
+		sum(bytes_on_disk) AS compressed_bytes,
+		sum(data_uncompressed_bytes) AS uncompressed_bytes
 	FROM %s WHERE active
 	GROUP BY database, table`, table)
 
@@ -187,7 +191,7 @@ func (c *Client) queryTopTables(ctx context.Context, d *DashboardData) error {
 	var all []PartSummary
 	for rows.Next() {
 		var ps PartSummary
-		if err := rows.Scan(&ps.Database, &ps.Table, &ps.Parts, &ps.Rows, &ps.Bytes); err != nil {
+		if err := rows.Scan(&ps.Database, &ps.Table, &ps.Parts, &ps.Rows, &ps.CompressedBytes, &ps.UncompressedBytes); err != nil {
 			return err
 		}
 		all = append(all, ps)
@@ -197,7 +201,7 @@ func (c *Client) queryTopTables(ctx context.Context, d *DashboardData) error {
 	copy(bySize, all)
 	for i := 0; i < len(bySize)-1; i++ {
 		for j := i + 1; j < len(bySize); j++ {
-			if bySize[j].Bytes > bySize[i].Bytes {
+			if bySize[j].CompressedBytes > bySize[i].CompressedBytes {
 				bySize[i], bySize[j] = bySize[j], bySize[i]
 			}
 		}
